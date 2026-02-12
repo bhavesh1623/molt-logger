@@ -1,0 +1,49 @@
+{
+  "name": "@molt/logger-client-node",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com/"
+  },
+  "version": "1.0.0",
+  "description": "Pino + MongoDB transport for centralized logging (NestJS, Express). One dedicated MongoDB for all microservices' logs.",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./request-logger": "./src/request-logger.js"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "test:local": "node scripts/test-local.js",
+    "start:example": "node example/app.js",
+    "start": "node src/index.js"
+  },
+  "keywords": [
+    "pino",
+    "logger",
+    "mongodb",
+    "centralized-logging",
+    "nestjs",
+    "express"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bhavesh1623/RND-for-molt",
+    "directory": "logger-client-node"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "pino": "^9.0.0",
+    "mongodb": "^6.3.0"
+  },
+  "peerDependencies": {
+    "pino": ">=8.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "express": "^4.18.0"
+  }
+}
