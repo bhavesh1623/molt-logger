@@ -56,15 +56,34 @@ module.exports = async function buildTransport(opts) {
     flushMs = FLUSH_MS,
   } = opts || {};
 
-  if (!uri)
+  if (!uri) {
+    const msg =
+      "[logger-client-node] MongoDB URI missing. Set LOG_MONGODB_URI in .env. Logs will not be stored.";
+    process.stderr.write(msg + "\n");
     throw new Error(
       "MongoDB URI for logs required: set LOG_MONGODB_URI (or MONGODB_URI) in environment",
     );
+  }
 
-  const client = new MongoClient(uri);
-  await client.connect();
+  let client;
+  try {
+    client = new MongoClient(uri);
+    await client.connect();
+  } catch (err) {
+    process.stderr.write(
+      `[logger-client-node] MongoDB connection failed: ${err.message}\n`,
+    );
+    process.stderr.write(
+      `[logger-client-node] Check LOG_MONGODB_URI in .env. Full: ${err.stack || err}\n`,
+    );
+    throw err;
+  }
   const dbName = database || client.db().databaseName;
   const col = client.db(dbName).collection(collection);
+
+  process.stderr.write(
+    `[logger-client-node] Connected to MongoDB (db: ${dbName}, collection: ${collection}). Logs will be stored.\n`,
+  );
 
   const buffer = [];
   let flushTimer = null;
@@ -72,14 +91,23 @@ module.exports = async function buildTransport(opts) {
   function flush() {
     if (buffer.length === 0) return;
     const docs = buffer.splice(0, buffer.length);
-    col.insertMany(docs, { ordered: false }).catch((err) => {
-      process.stderr.write(
-        `[logger-client-node] MongoDB insertMany failed: ${err.message}\n`,
-      );
-      process.stderr.write(
-        `[logger-client-node] Check LOG_MONGODB_URI and network. Full error: ${err.stack || err}\n`,
-      );
-    });
+    col
+      .insertMany(docs, { ordered: false })
+      .then(() => {
+        if (process.env.LOG_DEBUG === "1") {
+          process.stderr.write(
+            `[logger-client-node] Flushed ${docs.length} log(s) to MongoDB\n`,
+          );
+        }
+      })
+      .catch((err) => {
+        process.stderr.write(
+          `[logger-client-node] MongoDB insertMany failed: ${err.message}\n`,
+        );
+        process.stderr.write(
+          `[logger-client-node] Check LOG_MONGODB_URI and network. Error: ${err.stack || err}\n`,
+        );
+      });
   }
 
   function scheduleFlush() {
