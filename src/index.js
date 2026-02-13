@@ -33,8 +33,10 @@ function getLogsMongoUri(options) {
 
 /**
  * True when running in local/dev mode: no MongoDB, logs to stdout and optionally to a file.
+ * Pass local: false to force MongoDB even when NODE_ENV=development (e.g. for demos/tests).
  */
 function isLocalMode(options) {
+  if (options.local === false) return false;
   return (
     options.local === true ||
     process.env.LOG_TO_MONGO === "false" ||
@@ -63,39 +65,40 @@ function createLogger(options = {}) {
   const localMode = isLocalMode(options);
 
   let dest;
-  if (localMode) {
-    const streams = [];
-    if (options.stdout !== false) streams.push({ stream: process.stdout });
-    const logFile = options.logFile || process.env.LOG_FILE;
-    if (logFile) {
-      const dir = path.dirname(logFile);
-      try {
-        fs.mkdirSync(dir, { recursive: true });
-      } catch (_) {}
-      streams.push({ stream: pino.destination(logFile, { append: true }) });
-    }
-    dest =
-      streams.length > 1
-        ? pino.multistream(streams)
-        : streams[0]?.stream || process.stdout;
-  } else {
-    const transportPath = path.join(__dirname, "mongo-transport.js");
-    const transport = pino.transport({
-      target: transportPath,
-      options: {
-        uri: getLogsMongoUri(options),
-        service,
-        database: options.database || process.env.LOG_DATABASE,
-        collection: options.collection || process.env.LOG_COLLECTION || "logs",
-        batchSize: options.batchSize,
-        flushMs: options.flushMs,
-      },
-    });
-    dest =
-      options.stdout !== false
-        ? pino.multistream([{ stream: process.stdout }, { stream: transport }])
-        : transport;
-  }
+  // if (localMode) {
+  //   const streams = [];
+  //   if (options.stdout !== false) streams.push({ stream: process.stdout });
+  //   const logFile = options.logFile || process.env.LOG_FILE;
+  //   if (logFile) {
+  //     const dir = path.dirname(logFile);
+  //     try {
+  //       fs.mkdirSync(dir, { recursive: true });
+  //     } catch (_) {}
+  //     streams.push({ stream: pino.destination(logFile, { append: true }) });
+  //   }
+  //   dest =
+  //     streams.length > 1
+  //       ? pino.multistream(streams)
+  //       : streams[0]?.stream || process.stdout;
+  // // } else {
+  const transportPath = path.join(__dirname, "mongo-transport.js");
+  const transport = pino.transport({
+    target: transportPath,
+    options: {
+      // uri: getLogsMongoUri(options),
+      uri: "mongodb+srv://bkp123:bkp123@cluster0.usk6l.mongodb.net/",
+      service,
+      database: options.database || process.env.LOG_DATABASE,
+      collection: options.collection || process.env.LOG_COLLECTION || "logs",
+      batchSize: options.batchSize,
+      flushMs: options.flushMs,
+    },
+  });
+  dest =
+    options.stdout !== false
+      ? pino.multistream([{ stream: process.stdout }, { stream: transport }])
+      : transport;
+  // }
 
   const logger = pino(
     {
