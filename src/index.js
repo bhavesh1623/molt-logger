@@ -64,45 +64,51 @@ function createLogger(options = {}) {
   const service = options.service || process.env.LOG_SERVICE || "app";
   const localMode = isLocalMode(options);
 
+  const storageTag = localMode ? "local" : "mongodb";
+  const storageTags = localMode ? ["stdout", "local"] : ["stdout", "mongodb"];
+
   let dest;
-  // if (localMode) {
-  //   const streams = [];
-  //   if (options.stdout !== false) streams.push({ stream: process.stdout });
-  //   const logFile = options.logFile || process.env.LOG_FILE;
-  //   if (logFile) {
-  //     const dir = path.dirname(logFile);
-  //     try {
-  //       fs.mkdirSync(dir, { recursive: true });
-  //     } catch (_) {}
-  //     streams.push({ stream: pino.destination(logFile, { append: true }) });
-  //   }
-  //   dest =
-  //     streams.length > 1
-  //       ? pino.multistream(streams)
-  //       : streams[0]?.stream || process.stdout;
-  // // } else {
-  const transportPath = path.join(__dirname, "mongo-transport.js");
-  const transport = pino.transport({
-    target: transportPath,
-    options: {
-      // uri: getLogsMongoUri(options),
-      uri: "mongodb+srv://bkp123:bkp123@cluster0.usk6l.mongodb.net/",
-      service,
-      database: options.database || process.env.LOG_DATABASE,
-      collection: options.collection || process.env.LOG_COLLECTION || "logs",
-      batchSize: options.batchSize,
-      flushMs: options.flushMs,
-    },
-  });
-  dest =
-    options.stdout !== false
-      ? pino.multistream([{ stream: process.stdout }, { stream: transport }])
-      : transport;
-  // }
+  if (localMode) {
+    const streams = [];
+    if (options.stdout !== false) streams.push({ stream: process.stdout });
+    const logFile = options.logFile || process.env.LOG_FILE;
+    if (logFile) {
+      const dir = path.dirname(logFile);
+      try {
+        fs.mkdirSync(dir, { recursive: true });
+      } catch (_) {}
+      streams.push({ stream: pino.destination(logFile, { append: true }) });
+    }
+    dest =
+      streams.length > 1
+        ? pino.multistream(streams)
+        : streams[0]?.stream || process.stdout;
+  } else {
+    const transportPath = path.join(__dirname, "mongo-transport.js");
+    const transport = pino.transport({
+      target: transportPath,
+      options: {
+        uri: getLogsMongoUri(options),
+        service,
+        database: options.database || process.env.LOG_DATABASE,
+        collection: options.collection || process.env.LOG_COLLECTION || "logs",
+        batchSize: options.batchSize,
+        flushMs: options.flushMs,
+      },
+    });
+    dest =
+      options.stdout !== false
+        ? pino.multistream([{ stream: process.stdout }, { stream: transport }])
+        : transport;
+  }
 
   const logger = pino(
     {
       level: process.env.LOG_LEVEL || "info",
+      base: {
+        storage: storageTag,
+        storageTags,
+      },
       ...options.pino,
     },
     dest,

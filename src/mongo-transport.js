@@ -30,6 +30,8 @@ function pinoToDoc(line, service) {
     level: LEVEL_MAP[level] || "info",
     message: msg ?? (typeof rest.msg === "string" ? rest.msg : ""),
     service,
+    storage: "mongodb",
+    storageTags: ["mongodb"],
     timestamp: time != null ? new Date(time) : new Date(),
   };
   if (reqId != null) doc.reqId = String(reqId);
