@@ -66,6 +66,13 @@ function createLogger(options = {}) {
 
   const storageTag = localMode ? "local" : "mongodb";
   const storageTags = localMode ? ["stdout", "local"] : ["stdout", "mongodb"];
+  const source = "logger-client-node";
+
+  if (!localMode && !getLogsMongoUri(options)) {
+    console.warn(
+      "[logger-client-node] MongoDB mode but LOG_MONGODB_URI not set. Logs will not be stored. Set LOG_MONGODB_URI in .env",
+    );
+  }
 
   let dest;
   if (localMode) {
@@ -106,6 +113,7 @@ function createLogger(options = {}) {
     {
       level: process.env.LOG_LEVEL || "info",
       base: {
+        source,
         storage: storageTag,
         storageTags,
       },

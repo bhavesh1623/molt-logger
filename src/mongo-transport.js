@@ -11,7 +11,7 @@ const LEVEL_MAP = {
 };
 
 const BATCH_SIZE = parseInt(process.env.LOG_BATCH_SIZE, 10) || 50;
-const FLUSH_MS = parseInt(process.env.LOG_FLUSH_MS, 10) || 5000;
+const FLUSH_MS = parseInt(process.env.LOG_FLUSH_MS, 10) || 2000;
 
 function pinoToDoc(line, service) {
   const obj = typeof line === "string" ? JSON.parse(line) : line;
@@ -30,6 +30,7 @@ function pinoToDoc(line, service) {
     level: LEVEL_MAP[level] || "info",
     message: msg ?? (typeof rest.msg === "string" ? rest.msg : ""),
     service,
+    source: "logger-client-node",
     storage: "mongodb",
     storageTags: ["mongodb"],
     timestamp: time != null ? new Date(time) : new Date(),
@@ -47,9 +48,7 @@ function pinoToDoc(line, service) {
 
 module.exports = async function buildTransport(opts) {
   const {
-    uri = "mongodb+srv://bkp123:bkp123@cluster0.usk6l.mongodb.net/" ||
-      process.env.LOG_MONGODB_URI ||
-      process.env.MONGODB_URI,
+    uri = process.env.LOG_MONGODB_URI || process.env.MONGODB_URI,
     database = process.env.LOG_DATABASE,
     collection = process.env.LOG_COLLECTION || "logs",
     service = process.env.LOG_SERVICE || "app",
@@ -75,7 +74,10 @@ module.exports = async function buildTransport(opts) {
     const docs = buffer.splice(0, buffer.length);
     col.insertMany(docs, { ordered: false }).catch((err) => {
       process.stderr.write(
-        `[logger-client-node] insertMany failed: ${err.message}\n`,
+        `[logger-client-node] MongoDB insertMany failed: ${err.message}\n`,
+      );
+      process.stderr.write(
+        `[logger-client-node] Check LOG_MONGODB_URI and network. Full error: ${err.stack || err}\n`,
       );
     });
   }
